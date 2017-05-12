@@ -69,14 +69,16 @@ func bench(requests, concurrency int) {
 	mean, _ := stats.Mean(timings)
 	p90th, _ := stats.Percentile(timings, 90)
 	p99th, _ := stats.Percentile(timings, 99)
+	p50th, _ := stats.Percentile(timings, 50)
 
 	meanMillis := mean * MILLIS_IN_SECOND
 	p90thMillis := p90th * MILLIS_IN_SECOND
 	p99thMillis := p99th * MILLIS_IN_SECOND
+	p50thMillis := p50th * MILLIS_IN_SECOND
 
 	fmt.Printf("\n")
 	fmt.Printf("Time taken for tests: %.3fs\n", total.Seconds())
-	fmt.Printf("Time per container: %.3fms [mean] | %.3fms [90th] | %.3fms [99th]\n", meanMillis, p90thMillis, p99thMillis)
+	fmt.Printf("Time per container: %.3fms [mean] | %.3fms [50th] |%.3fms [90th] | %.3fms [99th]\n", meanMillis, p50thMillis, p90thMillis, p99thMillis)
 }
 
 func main() {
