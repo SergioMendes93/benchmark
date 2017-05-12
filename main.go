@@ -22,6 +22,8 @@ func worker(requests int, completeCh chan time.Duration) {
 		cmd.Stdout = &out
 		cmd.Stderr = &stderr
 
+		fmt.Println(out.String())
+
 		if err := cmd.Run(); err != nil {
 			fmt.Println("Error using docker run at rescheduling")
 			fmt.Println(fmt.Sprint(err) + ": " + stderr.String())
