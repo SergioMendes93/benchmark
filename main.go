@@ -12,6 +12,9 @@ import (
 
 const MILLIS_IN_SECOND = 1000
 
+var scheduled = 0
+var notScheduled = 0
+
 func worker(requests int, completeCh chan time.Duration) {
 	for i := 0; i < requests; i++ {
 		start := time.Now()
@@ -22,11 +25,15 @@ func worker(requests int, completeCh chan time.Duration) {
 		cmd.Stdout = &out
 		cmd.Stderr = &stderr
 
-		fmt.Println(out.String())
+		
 
 		if err := cmd.Run(); err != nil {
-			fmt.Println("Error using docker run at rescheduling")
+			fmt.Println("Not scheduled")
+			notScheduled++
 			fmt.Println(fmt.Sprint(err) + ": " + stderr.String())
+		} else {
+			//TODO: se eu usar concorrencia entao vou precisar de usar locks para estes contadores
+			scheduled++
 		}
 		completeCh <- time.Since(start)
 	}
@@ -81,8 +88,9 @@ func bench(requests, concurrency int) {
 	fmt.Printf("\n")
 	fmt.Printf("Time taken for tests: %.3fs\n", total.Seconds())
 	fmt.Printf("Time per container: %.3fms [mean] | %.3fms [50th] |%.3fms [90th] | %.3fms [99th]\n", meanMillis, p50thMillis, p90thMillis, p99thMillis)
+	fmt.Printf("Scheduled: %d | Not scheduled: %d", scheduled, notScheduled) 
 }
 
 func main() {
-	bench(30, 2)
+	bench(30, 1)
 }
