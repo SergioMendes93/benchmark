@@ -80,5 +80,5 @@ func bench(requests, concurrency int) {
 }
 
 func main() {
-	bench(1, 1)
+	bench(30, 1)
 }
