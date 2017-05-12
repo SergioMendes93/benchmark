@@ -19,8 +19,8 @@ func worker(requests int, completeCh chan time.Duration) {
 	for i := 0; i < requests; i++ {
 		start := time.Now()
 
-		cmd := exec.Command("docker","-H", "tcp://0.0.0.0:2376","run", "-itd", "-c", "0", "-m", "0", "-e", "affinity:requestclass==4", "-e", "affinity:requesttype==job", "ubuntu")
-//		cmd := exec.Command("docker","-H", "tcp://0.0.0.0:2376","run", "-itd", "-c", "0", "-m", "0", "ubuntu")
+//		cmd := exec.Command("docker","-H", "tcp://0.0.0.0:2376","run", "-itd", "-c", "0", "-m", "0", "-e", "affinity:requestclass==4", "-e", "affinity:requesttype==job", "ubuntu")
+		cmd := exec.Command("docker","-H", "tcp://0.0.0.0:2376","run", "-itd", "-c", "0", "-m", "0", "ubuntu")
 		var out, stderr bytes.Buffer
 		cmd.Stdout = &out
 		cmd.Stderr = &stderr
@@ -88,7 +88,7 @@ func bench(requests, concurrency int) {
 	fmt.Printf("\n")
 	fmt.Printf("Time taken for tests: %.3fs\n", total.Seconds())
 	fmt.Printf("Time per container: %.3fms [mean] | %.3fms [50th] |%.3fms [90th] | %.3fms [99th]\n", meanMillis, p50thMillis, p90thMillis, p99thMillis)
-	fmt.Printf("Scheduled: %d | Not scheduled: %d", scheduled, notScheduled) 
+	fmt.Printf("Scheduled: %d | Not scheduled: %d\n", scheduled, notScheduled) 
 }
 
 func main() {
