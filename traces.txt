@@ -1,0 +1,2 @@
+makespan:1296,cpu:167,memory:291708828,requestClass:2,requestRate:0
+makespan:227,cpu:220,memory:66128788,requestClass:2,requestRate:0

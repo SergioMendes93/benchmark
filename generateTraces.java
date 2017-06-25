@@ -1,6 +1,8 @@
 import java.util.Random;
 import java.util.HashMap;
 import java.util.Map;
+import java.io.*;
+
 
 class generateTraces {
 	private static double calculateExponentialRandomNumber() {
@@ -40,12 +42,12 @@ class generateTraces {
 	}
 
 	//maps the value returned by the expoential distribution to workload memory requirements (min 4mb shares, max 2gb shares 	
-	private static int mapMemory() {
+	private static long mapMemory() {
 		double randomNumber = calculateExponentialRandomNumber();
 		long maxMemory =  2147483648L; //2gb in bytes
 		Double ms = new Double(randomNumber * maxMemory);
 		
-		int memory = ms.intValue();
+		long memory = ms.intValue();
 		
 		if (memory < 4194304) 
 			memory = 4194304; //4194304 (4mb) is minimum memory
@@ -54,10 +56,66 @@ class generateTraces {
 		
 	}
 
+	//maps the value returned by the expoential distribution to request rate to services (min 1 max 50 requests per second) 	
+	private static long mapRequestRate() {
+		double randomNumber = calculateExponentialRandomNumber();
+		Double ms = new Double(randomNumber * 50);
+		
+		int requestRate = ms.intValue();
+		return requestRate;
+		
+	}
+
+	/*
+	Class request distribution:
+	class 1: 10% chance
+	class 2: 30% chance
+	class 3: 45% chance
+	class 4: 15% chance	
+	*/
+	private static int generateRequestClass() {
+		Random rand = new Random();
+                double probability = rand.nextDouble();
+		int requestClass;		
+
+		if (probability < 0.1) 
+			requestClass = 1;
+		else if (probability < 0.4)
+			requestClass = 2;
+		else if (probability < 0.85)
+			requestClass = 3;
+		else
+			requestClass = 4;
+		return requestClass;
+	}
+
+	//method used to save the traces to a file so all scheduling algorithms use the same traces to benchmark
+	private static void saveToFile(int makespan, int cpu, long memory, int requestClass, int requestRate) {
+		String dataToSave = "makespan:" + makespan + ",cpu:" + cpu + ",memory:" + memory + ",requestClass:" + requestClass + ",requestRate:" + requestRate;
+
+		try(FileWriter fw = new FileWriter("traces.txt", true);
+			BufferedWriter bw = new BufferedWriter(fw);
+    			PrintWriter out = new PrintWriter(bw))
+		{
+    			out.println(dataToSave);
+		} catch (IOException e) {
+			System.out.println("Exception writing to file: " + e);
+}		}
+
+	private static void generateTrace() {
+		int makespan = mapMakespan();
+		int cpu	= mapCPU();
+		long memory = mapMemory();
+		int requestClass = generateRequestClass();
+		
+		saveToFile(makespan, cpu, memory, requestClass, 0);
+		
+		System.out.println("First trace makespan: " + makespan + " seconds, cpu: " + cpu + " shares, memory: " + memory + " bytes, requestclass: " + requestClass);
+	}
 	
 	public static void main(String args[]) {
 //      	  while(true) {}
-		mapMakespan();
+		generateTrace();
 	}
 
 	private static void testing() {
