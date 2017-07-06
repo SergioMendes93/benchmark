@@ -4,6 +4,10 @@ import redis.clients.jedis.Pipeline;
 
 public class RedisStringJava { 
    public static void main(String[] args) { 
+
+
+	//TODO o porto vai vir no request enviado pelo utilizador
+
       //Connecting to Redis server on localhost , para fazer requests em vez de localhost vai ser o IP do host que esta a correr
       Jedis jedis = new Jedis("localhost", 9011); 
       //set the data in redis string 
@@ -17,12 +21,16 @@ public class RedisStringJava {
 	long fiveMega = 524288000; //500mb
 	long correspondentValue = 2097151; //Value to get 500mb being consumed
 	long memoryRequirement = 1073741824; 
-	
-	long value = (memoryRequirement * correspondentValue) / fiveMega;
+
+	//TODO este codigo pode estar no task registry, o memory requirement vai ser substituido pelo valor de memoria pedido pelo user
+	//TODO, nao encher tudo o que o utilizador pedir, pensar sobre isto. por exemplo se ele pedir 4gb, encher 3gb? 2.5gb? falar com o prof sobre isto.
+	//TODO os requests vai ser tudo a mesma key para simplificar
+
+	long value = (memoryRequirement * correspondentValue) / fiveMega; //TODO ver se isto funciona para 4gb (valor maximo)
 
 	Pipeline pipeline = jedis.pipelined();
   	for (long i = 0 ; i < value; i++) {
-    		pipeline.sadd("keyyy"+i, "value");
+    		pipeline.sadd("key"+i, "value");
     	// you can call pipeline.sync() and start new pipeline here if you think there're so much operations in one pipeline
   	}
   	pipeline.sync();
