@@ -10,9 +10,13 @@ import java.net.*;
 import java.util.*;
 
 public class launchBenchmarks {
+	static long memoryLimit = new Long("88583700480"); //88gb with 150% overbooking //59055800320; //55gb full capacity of the 5 servers
+	static int cpuLimit = 61440; //150% overbooking 40960; //40960 cpu shares total
+	static long memorySent = 0; //going to be used to control the workload sent to the server so it does not overload
+	static int cpuSent = 0;
+	static List<Long> listMakespan = new ArrayList<>(); //this is going to be used to make an average of the makespan of the workloads sent so after that average has passed we can send workload again
+
 	private static void readTraces() {
-		int portNumberTime = 9000;
-		int portNumberRedis = 10000;
                 try {
 	                BufferedReader br = new BufferedReader(new FileReader("traces.txt"));
                         String line = br.readLine();
@@ -23,19 +27,39 @@ public class launchBenchmarks {
                                 String[] cpu = parts[1].split(":");
                                 String[] memory = parts[2].split(":");
                                 String[] requestClass = parts[3].split(":");
-                                String[] requestRate = parts[4].split(":");
-				String[] requestType = parts[5].split(":");
-				String[] requestImage = parts[6].split(":");				
+                                String[] requestType = parts[4].split(":");
+				String[] requestImage = parts[5].split(":");
+				String[] requestRate = parts[6].split(":");				
+				String[] portNumber = parts[7].split(":");				
 
+				memorySent += Long.parseLong(memory[1],10);
+				cpuSent += Long.parseLong(cpu[1],10);
+				listMakespan.add(Long.parseLong(makespan[1],10));
+
+				if (memorySent > memoryLimit || cpuSent > cpuLimit) {
+					memorySent = 0; 
+					cpuSent = 0;
+					long makespanAux = 0;
+					int  length = listMakespan.size();
+					for (Long i: listMakespan) { 
+						makespanAux += i.longValue();
+					}
+					listMakespan.clear();
+					System.out.print("List makespan size: " + listMakespan.size());
+					long waitTime = makespanAux / length;
+					System.out.println("Wait time: " + waitTime);
+					Thread.sleep(waitTime * 1000); // *1000 because it is in miliseconds
+					System.out.println("continuing");
+					
+				}
+				
                                 //make the request to the scheduler
 				if (requestType[1].equals("service")) { //for services
 					if (requestImage[1].equals("sergiomendes/timeserver")) {
-                                		Thread t = new ThreadB(makespan[1], cpu[1], memory[1], requestClass[1], requestRate[1], requestType[1], portNumberTime, requestImage[1]);
-						portNumberTime++;
+                                		Thread t = new ThreadB(makespan[1], cpu[1], memory[1], requestClass[1], requestRate[1], requestType[1], portNumber[1], requestImage[1]);
                                 		t.start();
 					} else {
-                                		Thread t = new ThreadB(makespan[1], cpu[1], memory[1], requestClass[1], requestRate[1], requestType[1], portNumberRedis, requestImage[1]);
-						portNumberRedis++;
+                                		Thread t = new ThreadB(makespan[1], cpu[1], memory[1], requestClass[1], requestRate[1], requestType[1], portNumber[1], requestImage[1]);
                                 		t.start();
 					}
 	
@@ -44,10 +68,6 @@ public class launchBenchmarks {
                                 	t.start();
 				}
                                 line = br.readLine();
-				if (portNumberTime == 9999) 
-					portNumberTime = 9000;
-				else if (portNumberRedis == 10999)
-					portNumberRedis = 10000;
                         }
                         br.close();
 		} catch (Exception e) {
@@ -58,11 +78,14 @@ public class launchBenchmarks {
 
     public static void main(String[] args) throws Exception {
 //	readTraces();
-	Thread t = new ThreadB("30000000", "1024", "100000000", "4", "0", "service", 9000, "sergiomendes/timeserver");
+/*	Thread t = new ThreadB("30000000", "1024", "1000000000", "4", "0", "job", Integer.parseInt(args[0]), "cpu");
         t.start();
+	Thread t1 = new ThreadB("30000000", "1024", "1000000000", "4", "0", "job", Integer.parseInt(args[0]), "enhance");
+        t1.start();*/
+//	Thread t2 = new ThreadB("30000000", "1024", "1000000000", "4", "0", "service", Integer.parseInt(args[0]), "redis");
+ //       t2.start();
  
     }
-
 	static class ThreadA extends Thread {
         	String makespan, cpu, memory, requestClass, requestImage, requestType;
 
@@ -82,24 +105,18 @@ public class launchBenchmarks {
                         try {
                 URL obj = new URL(url);
                 HttpURLConnection con = (HttpURLConnection) obj.openConnection();
-
                 int responseCode = con.getResponseCode();
-
                 BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()));       
-
                 }catch(Exception e) {
                         System.out.println("Exception " + e);
                         }
-
                 }*/
         	}
 	}
 	//for launching services 
 	static class ThreadB extends Thread {
-        	String makespan, cpu, memory, requestRate, requestClass, requestType, requestImage;
-		int portNumber;
-
-                public ThreadB(String makespan, String cpu, String memory, String requestClass, String requestRate, String requestType, int portNumber, String requestImage) {
+        	String makespan, cpu, memory, requestRate, requestClass, requestType, requestImage, portNumber;
+                public ThreadB(String makespan, String cpu, String memory, String requestClass, String requestRate, String requestType, String portNumber, String requestImage) {
                         this.makespan = makespan;
 			this.requestImage = requestImage;
                         this.cpu = cpu;
@@ -112,7 +129,7 @@ public class launchBenchmarks {
 
                 @Override
                 public void run() {
-                        String url = "http://146.193.41.142:8000/entrypoint?"+cpu+"&"+memory+"&"+requestImage+"&"+requestClass+"&service&"+makespan+"&"+portNumber;
+                        String url = "http://146.193.41.142:8000/entrypoint?"+cpu+"&"+memory+"&"+requestImage+"&"+requestClass+"&"+requestType+"&"+makespan+"&"+portNumber;
         //              String url = "http://146.193.41.142:8000/entrypoint?1024&100000000&hello-world&"+requestClass+"&service";
                         try {
 				

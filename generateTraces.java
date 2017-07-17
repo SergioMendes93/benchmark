@@ -28,17 +28,18 @@ class generateTraces {
 	}
 	
 	//maps the value returned by the expoential distribution to workload CPU requirements (min 2 shares, max 1024 shares (100% cpu usage)	
-	private static int mapCPU() {
+	private static int mapCPU(String requestType) {
 		double randomNumber = calculateExponentialRandomNumber();
 		Double ms = new Double(randomNumber * 1024);
 		
 		int cpu = ms.intValue();
 		
-		if (cpu < 2) 
-			cpu = 2; //2 is minimum shares
-		
+		if (requestType.equals("service")) {
+			if (cpu < 2) 
+				cpu = 2; //2 is minimum shares
+		} else if (cpu < 204) //if its a job, minimum CPU is 20%, 204 cpu shares
+			cpu = 204;
 		return cpu;
-		
 	}
 
 	//maps the value returned by the expoential distribution to workload memory requirements (min 4mb shares, max 2gb shares 	
@@ -49,8 +50,8 @@ class generateTraces {
 		
 		long memory = ms.intValue();
 		
-		if (memory < 4194304) 
-			memory = 4194304; //4194304 (4mb) is minimum memory
+		if (memory < 268435456) 
+			memory =  268435456; //4194304 (256mb) is minimum memory
 		
 		return memory;
 		
@@ -90,8 +91,8 @@ class generateTraces {
 	}
 
 	//method used to save the traces to a file so all scheduling algorithms use the same traces to benchmark
-	private static void saveToFile(int makespan, int cpu, long memory, int requestClass, int requestRate) {
-		String dataToSave = "makespan:" + makespan + ",cpu:" + cpu + ",memory:" + memory + ",requestClass:" + requestClass + ",requestRate:" + requestRate;
+	private static void saveToFile(int makespan, int cpu, long memory, int requestClass, String requestType, String requestWorkload, int requestRate, int portNumber) {
+		String dataToSave = "makespan:" + makespan + ",cpu:" + cpu + ",memory:" + memory + ",requestClass:" + requestClass + ",requestType:" + requestType + ",requestWorkload:" + requestWorkload + ",requestRate:" + requestRate + ",portNumber:" + portNumber;
 
 		try(FileWriter fw = new FileWriter("traces.txt", true);
 			BufferedWriter bw = new BufferedWriter(fw);
@@ -100,18 +101,95 @@ class generateTraces {
     			out.println(dataToSave);
 		} catch (IOException e) {
 			System.out.println("Exception writing to file: " + e);
-}		}
+		}		
+	}
+
+	//generates request (type and workload)
+/*
+	Distribution: CPU intensive profile: Mem intensive profile: redis: 70% CPU/Mem intensive profile: enhance 70% Non-intensive: timeserver 70%
+		ffmpeg: 70%
+		enhance: 10%
+		redis: 10%
+		timeserver: 10%
+
+	Mixed Distribution: everyone 25%
+*/
+	private static String[] generateRequest() {
+		Random rand = new Random();
+                double probability = rand.nextDouble();
+                String[] request = new String[2];
+
+                if (probability < 0.25) {
+                        request[0] = "service";
+			request[1] = "sergiomendes/timeserver";
+                } else if (probability < 0.50) {
+                        request[0] = "service";
+			request[1] = "redis";
+                } else if (probability < 0.75) {
+                        request[0] = "job";
+			request[1] = "enhance";
+                } else {
+                        request[0] = "service";
+			request[1] = "ffmpeg";
+		}
+                return request;
+	}
+	
+	/*
+	Generates request rate for services according to the following distribution, the higher the memory, the more requests
+		< 512mb  : 20 requests
+		< 1gb 	 : 40 requests
+		< 2gb	 : 80 requests
+		< 4gb    : 160 requests
+	*/
+	private static int generateRequestRate(String requestType, long memory) {
+		long twogb = new Long("2147483648");
+		if (!requestType.equals("service"))
+			return 0;
+		else {
+			if (memory < 536870912)
+				return 20;
+			else if (memory < 1073741824)
+				return 40;
+			else if (memory < twogb)
+				return 80;
+			else 
+				return 160;
+		}
+	}
+
+	private static int generatePortNumber(String requestType, String requestWorkload) {
+		if (!requestType.equals("service"))
+			return 0;
+		else if (requestWorkload.equals("redis")) {
+			if (portNumberRedis == 9999)
+				portNumberRedis = 9000;
+			portNumberRedis++;
+			return portNumberRedis;
+		} else {
+			if (portNumberTime ==  10999)
+				portNumberTime = 10000;
+			portNumberTime++;
+			return portNumberTime;
+		}
+	}
 
 	private static void generateTrace() {
+		String[] request = generateRequest();
 		int makespan = mapMakespan();
-		int cpu	= mapCPU();
+		int cpu	= mapCPU(request[0]);
 		long memory = mapMemory();
 		int requestClass = generateRequestClass();
-		
-		saveToFile(makespan, cpu, memory, requestClass, 0);
+		int requestRate = generateRequestRate(request[0], memory);
+		int portNumber = generatePortNumber(request[0], request[1]);		
+
+		saveToFile(makespan, cpu, memory, requestClass, request[0], request[1], requestRate, portNumber);
 		
 		System.out.println("First trace makespan: " + makespan + " seconds, cpu: " + cpu + " shares, memory: " + memory + " bytes, requestclass: " + requestClass);
 	}
+	
+	static int portNumberTime = 9000;
+	static int portNumberRedis = 10000;
 	
 	public static void main(String args[]) {
 //      	  while(true) {}
